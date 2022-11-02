@@ -12,6 +12,7 @@ library(DT)
 
 
 
+Sys.setlocale(locale='no_NB.utf8')
 header <- dashboardHeader(title = "Lusestrategispill")
 
 sidebar <- dashboardSidebar(
