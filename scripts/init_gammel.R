@@ -116,7 +116,6 @@ summarise_data <- function(SV_local = SV,
       mutate(use.DMcht  = shift_treatment(SV$use.DMcht, x)) %>% 
       mutate(use.AZcht  = shift_treatment(SV$use.AZcht, x)) %>%
       mutate(use.EMcht  = shift_treatment(SV$use.EMcht, x)) %>%      # 11. mar: la til EMcht
-      mutate(EMcht  = shift_treatment(SV$use.EMcht, x)) %>%          # lagt inn 4. nov - for mulighet for disabling
       mutate(use.DBcht  = shift_treatment(SV$use.DBcht, x)) %>% 
       mutate(use.therm  = shift_treatment(SV$use.therm, x)) %>% 
       mutate(use.freshw = shift_treatment(SV$use.freshw, x)) %>% 
@@ -128,9 +127,7 @@ summarise_data <- function(SV_local = SV,
     do.call(rbind, .) %>% 
     mutate(treatment = ((use.HPcht + use.DMcht + use.AZcht + use.EMcht + use.DBcht + use.therm + use.freshw + use.mech + use.fx != 0) * day)) %>%
     # mutate(treatment = (use.HPcht + use.DMcht + use.AZcht + use.DBcht + use.therm + use.freshw + use.mech + use.fx != 0)) %>%
-    dplyr::select(!starts_with("use")) %>% 
-    mutate(treatment = na_if(treatment, 0))
-  
+    dplyr::select(!starts_with("use"))
   
   
 }

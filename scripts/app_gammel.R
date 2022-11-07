@@ -9,9 +9,10 @@ library(shinyjs)
 library(shinyBS)
 library(shinycssloaders)
 library(DT)
-library(shinyWidgets)
 
 
+
+Sys.setlocale(locale='no_NB.utf8')
 header <- dashboardHeader(title = "Lusestrategispill")
 
 sidebar <- dashboardSidebar(
@@ -110,11 +111,10 @@ body <- dashboardBody(
                                        "Merd 2" = "2",
                                        "Merd 3" = "3",
                                        "Merd 4" = "4")),
-                  radioGroupButtons("TreatmentType", "Type behandling:",
+                  radioButtons("TreatmentType", "Type behandling:",
                                c("Ikke-medikamentell" = "therm",
                                  "Fôrbehandling" = "EMcht",
-                                 "Medikamentell" = "HPcht"),
-                               direction = "vertical"),
+                                 "Medikamentell" = "HPcht")),
                   radioButtons("Cleaner2", "Tilsette mer rensefisk?",
                                c("Nei" = 0,
                                  "Ja" = 1)),
@@ -148,8 +148,7 @@ body <- dashboardBody(
             fluidRow(
               actionButton("switchSpill2", "Tilbake til spillet"),
               plotOutput("sim_plot"),
-              plotOutput("temp"),
-              tableOutput("summarise")))
+              plotOutput("temp")))
             )
             
     )
@@ -277,14 +276,15 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
            observeEvent(input$switchSpill, {
              updateTabsetPanel(session, "tabs",selected = "spill")
            })
-           if(t < 2) disable(selector = "#TreatmentType button:eq(0)") 
+          
+           
            # ## Dato
            # dato <- reactiveValues(d = dmy(paste(15, paste0(0, rec_env$new.model.settings$start.mo), year(today()), sep = "-")))
            # dato$d <- dato$d + t
            # print(dato$d)
            
            observeEvent(input$Go,{
-
+             
              ## LUSESPILL
              
              # rec_env$new.model.settings$do_treat <- if( input$HowTreat == "ingen") {
@@ -481,13 +481,6 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
               
              }  ## End while loop
              
-             if(sum(rec_env$summarised_data$EMcht) > 0) disable(selector = "#TreatmentType button:eq(1)") ## Disabling the choice for forbehandling etter en behandling
-             if((rec_env$SV$W.SAL[rec_env$t, 1] < 1)) {
-               disable(selector = "#TreatmentType button:eq(0)")
-             } else {
-               enable(selector = "#TreatmentType button:eq(0)")
-             }
-             ## Disabling the choice for ikkemedikamentell behandling under ett kilo fiskevekt
            }) ## End observe event
            
            observeEvent(input$secCount, {
@@ -635,8 +628,6 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                geom_point(data = rec_env$summarised_data %>% filter(!is.nan(Y.AF)),
                           mapping = aes(day, seatemp))
            })
-           
-           output$summarise <- renderTable({rec_env$summarised_data})
            
          }
          # }
