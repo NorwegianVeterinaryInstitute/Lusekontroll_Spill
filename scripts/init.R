@@ -10,7 +10,7 @@ library(shinyjs)
 library(shinyBS)
 library(shinycssloaders)
 library(DT)
-
+Sys.setlocale(locale='no_NB.utf8')
 ## Load data
 Coef <- readRDS("Coef20211209.Rds")
 load("EnvListShort.Rdata")
