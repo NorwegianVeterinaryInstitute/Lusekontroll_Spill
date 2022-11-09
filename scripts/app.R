@@ -11,9 +11,10 @@ library(shinycssloaders)
 library(DT)
 library(shinyWidgets)
 
-
+Sys.setlocale(locale='no_NB.utf8')  ## For at det skal virke på maskina til Lars
 header <- dashboardHeader(title = "Lusestrategispill")
 
+## Design på sidepanelet
 sidebar <- dashboardSidebar(
   sidebarMenu(
     id = "tabs",
@@ -23,6 +24,7 @@ sidebar <- dashboardSidebar(
     menuItem("Tidsserier", tabName = "grafer", icon = icon("chart-area"))
   )
 )
+
 
 body <- dashboardBody(
   shinyjs::useShinyjs(),
@@ -52,6 +54,9 @@ body <- dashboardBody(
                         )
                    )
             )),
+
+# Design på hovedpanelet --------------------------------------------------
+
               
             
     tabItem("valg",
@@ -100,21 +105,25 @@ body <- dashboardBody(
     tabItem("spill",
             fluidRow(
               box(width = 4,
-                  radioButtons("HowTreat", "Behandle?:",
-                               c("Nei, ingen behandling" = "ingen",
-                                 "Ja, alle merder" = "alle",
-                                 "Ja, merdvis" = "merdvis"),
-                               selected = "ingen"),
-                  checkboxGroupInput("CageSel", "Hvis merdvis, hvilke?",
+                  radioGroupButtons("TreatmentType", "Behandling:",
+                                    c("Ikke-medikamentell" = "therm",
+                                      "Fôrbehandling" = "EMcht",
+                                      "Medikamentell" = "HPcht"),
+                                    direction = "vertical",
+                                    selected = character(0)),
+                  # radioButtons("HowTreat", "Behandle?:",
+                  #              c("Nei, ingen behandling" = "ingen",
+                  #                "Ja, alle merder" = "alle",
+                  #                "Ja, merdvis" = "merdvis"),
+                  #              selected = "ingen"),
+                  checkboxGroupInput("CageSel", "Hvilke merder vil du behandle?",
                                      c("Merd 1" = "1",
                                        "Merd 2" = "2",
                                        "Merd 3" = "3",
-                                       "Merd 4" = "4")),
-                  radioGroupButtons("TreatmentType", "Type behandling:",
-                               c("Ikke-medikamentell" = "therm",
-                                 "Fôrbehandling" = "EMcht",
-                                 "Medikamentell" = "HPcht"),
-                               direction = "vertical"),
+                                       "Merd 4" = "4"),
+                                     selected = c('1', '2', '3', '4')
+                                     ),
+
                   radioButtons("Cleaner2", "Tilsette mer rensefisk?",
                                c("Nei" = 0,
                                  "Ja" = 1)),
@@ -154,6 +163,9 @@ body <- dashboardBody(
             
     )
 
+
+# Server code and implementation of user interface ------------------------
+
 shinyApp(ui = dashboardPage(header, sidebar, body), 
          server = function(input, output, session){
            ## Load functions
@@ -168,7 +180,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
            # update rec_env$default.model.settings
            
            
-           ## set_reactive_values
+           ## set_reactive_values in model settings
            rec_env <- reactiveValues(default.model.settings = default.model.settings,
                                      oppsDF = oppsDF,
                                      start.model.settings = NULL,
@@ -184,7 +196,6 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                                      dato = NULL)
            
            observeEvent(input$Next, {
-             
              shinyjs::show("switchSpill")
              
              ## Brukervalg
@@ -273,6 +284,8 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
              })
            })
            
+
+# Spillfane ---------------------------------------------------------------
            
            observeEvent(input$switchSpill, {
              updateTabsetPanel(session, "tabs",selected = "spill")
@@ -283,7 +296,64 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
            # dato$d <- dato$d + t
            # print(dato$d)
            
+           
+           ## Disable treatment options -----------------------------------------------
+           #initialize reactive values (will use to store selected boxes to identify newest selection)
+           rv <- reactiveValues()
+           #initialize selected boxes to NULL
+           rv$disableBoxes <- NULL 
+           observeEvent(input$TreatmentType, {
+             
+             #extract newest selection by identifying which values are in a that have not been previously selected
+             whichDisable <-  c() ## Initialize the object
+             whichEnable <-  c() ## Initialize the object
+             if(!is.null(rec_env$t)) {
+               # whichDisable <-  c('4', '2') ## Some function here
+               whichDisableTF <- rec_env$summarised_data %>%  ## Pipeline that looks for restrictions in feed treatments
+                 group_by(cage) %>%
+                 summarise(sumTreat = sum(EMcht, na.rm = T)) %>%
+                 dplyr::select(sumTreat) %>%
+                 mutate(sumTreat = sumTreat != 0) %>%
+                 unlist %>%
+                 unname
+
+               whichDisable <- c(1:4)[whichDisableTF]
+               whichEnable  <- c(1:4)[!whichDisableTF]
+             }
+##sm <<- rec_env$summarised_data
+
+             #create object that identifies newly selected checkbox (syntax found using selectorgadget)
+             subElement <- paste0("#CageSel .checkbox:nth-child(", whichDisable,") label")
+             #disable single checkbox of group
+             
+             if(input$TreatmentType == "EMcht") {
+               shinyjs::disable(selector=subElement)
+               # #store all selected checkboxes
+               rv$disableBoxes <- input$CageSel
+               updateCheckboxGroupInput( ## cage selector
+                 session = session, 
+                 inputId = "CageSel",
+                 selected = whichEnable
+               )
+               
+             } else {
+               shinyjs::enable(selector=subElement)
+               #store all selected checkboxes
+               rv$disableBoxes <- input$CageSel
+               updateCheckboxGroupInput( ## cage selector
+                 session = session, 
+                 inputId = "CageSel",
+                 selected = c(1:4)
+               )
+             }
+             
+             
+           })
+           
            observeEvent(input$Go,{
+
+
+
 
              ## LUSESPILL
              
@@ -292,21 +362,23 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
              # } else {
              #   1
              # }
-             
-             rec_env$new.model.settings$do_treat <- if( input$HowTreat != "alle" & length(input$CageSel) == 0) {
-               0
+#################### Velger parametere for behandling
+             if(is.null(input$TreatmentType)) {             
+               rec_env$new.model.settings$do_treat <- 0
              } else {
-               1
+               rec_env$new.model.settings$do_treat <- 1
              }
-             
+###################             
              rec_env$new.model.settings$trt.type <- input$TreatmentType
              rec_env$new.model.settings$do_addclf <- input$Cleaner2
-             rec_env$new.model.settings$which_treat <- if ( input$HowTreat == "alle") {
-               "all"
-             } else {
-               input$CageSel
-             }
-             
+             rec_env$new.model.settings$which_treat <- as.numeric(input$CageSel)
+               #if ( input$HowTreat == "alle") {
+             #   ## Ta bort if-else-statement
+             #   "all"
+             # } else {
+             #  input$CageSel
+             #}
+             ## ccc <<- input$CageSel
              while( rec_env$t < rec_env$new.model.settings$Ndays ) {
              
                SV_T <- update_SV(SV_local = rec_env$SV, 
@@ -316,9 +388,18 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                
                rec_env$new.model.settings$do_treat <- 0
                rec_env$new.model.settings$do_addclf <- 0
-               
-               reset("HowTreat")
-               reset("CageSel")
+              # mmm <<- rec_env$new.model.settings
+               #reset("HowTreat")  ## Tabort
+               #reset("CageSel")
+               subElement <- paste0("#CageSel .checkbox:nth-child(", c(1:4),") label")
+               shinyjs::enable(selector=subElement)
+               #store all selected checkboxes
+               rv$disableBoxes <- input$CageSel
+               updateCheckboxGroupInput( ## cage selector
+                 session = session, 
+                 inputId = "CageSel",
+                 selected = c(1:4)
+               )
                reset("TreatmentType")
                reset("Cleaner2")
                
@@ -481,12 +562,28 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
               
              }  ## End while loop
              
-             if(sum(rec_env$summarised_data$EMcht) > 0) disable(selector = "#TreatmentType button:eq(1)") ## Disabling the choice for forbehandling etter en behandling
+
              if((rec_env$SV$W.SAL[rec_env$t, 1] < 1)) {
-               disable(selector = "#TreatmentType button:eq(0)")
+               updateRadioGroupButtons( ## Update treatment type
+                 session = session, 
+                 inputId = "TreatmentType",
+                 selected = character(0), 
+                 disabledChoices = c('therm')
+               )
              } else {
-               enable(selector = "#TreatmentType button:eq(0)")
+               updateRadioGroupButtons( ## Update treatment type
+                 session = session, 
+                 inputId = "TreatmentType",
+                 selected = character(0)
+               )
              }
+             ##svsv <<- rec_env$SV
+            # if(sum(rec_env$summarised_data$EMcht) > 0) disable(selector = "#TreatmentType button:eq(1)") ## Disabling the choice for forbehandling etter en behandling
+             # if((rec_env$SV$W.SAL[rec_env$t, 1] < 1)) {
+             #   disable(selector = "#TreatmentType button:eq(0)")
+             # } else {
+             #   enable(selector = "#TreatmentType button:eq(0)")
+             # }
              ## Disabling the choice for ikkemedikamentell behandling under ett kilo fiskevekt
            }) ## End observe event
            
