@@ -621,18 +621,14 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                )
               
              }  ## End while loop
+             
 
-
-### Update treatment options ------------------------------------------------
-
+### Medikamentell treatment available or not --------------------------------
+              
              whichDisableTF <- find_disableTF()
              whichDisable <- c(1:4)[whichDisableTF]
              disabled_choices <- character()
              if(length(whichDisable) == 4) disabled_choices <- c(disabled_choices, "EMcht")
-             
-
-### Medikamentell treatment available or not --------------------------------
-
 
              if((rec_env$SV$W.SAL[rec_env$t, 1] < 1)) {
                disabled_choices <- c(disabled_choices, "therm")# Disabling the choice for ikkemedikamentell behandling under ett kilo fiskevekt
