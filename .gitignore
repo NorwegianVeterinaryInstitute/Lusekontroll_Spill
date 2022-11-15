@@ -8,10 +8,11 @@ input/
 *.RData
 
 # Ignore the Rproj file
-scripts.Rproj
+*.Rproj
 
 # Ignore the .Rhistory file
 .Rhistory
 
 # Ignore the Rproj support files
 .Rproj.user/
+.Rproj.user/shared/notebooks/paths
