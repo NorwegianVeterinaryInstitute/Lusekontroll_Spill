@@ -302,13 +302,8 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
            rv <- reactiveValues()
            #initialize selected boxes to NULL
            rv$disableBoxes <- NULL 
-           observeEvent(input$TreatmentType, {
-             
-             #extract newest selection by identifying which values are in a that have not been previously selected
-             whichDisable <-  c() ## Initialize the object
-             whichEnable <-  c() ## Initialize the object
+           find_disableTF <- function(x) {
              if(!is.null(rec_env$t)) {
-               # whichDisable <-  c('4', '2') ## Some function here
                whichDisableTF <- rec_env$summarised_data %>%  ## Pipeline that looks for restrictions in feed treatments
                  group_by(cage) %>%
                  summarise(sumTreat = sum(EMcht, na.rm = T)) %>%
@@ -316,11 +311,19 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                  mutate(sumTreat = sumTreat != 0) %>%
                  unlist %>%
                  unname
-
-               whichDisable <- c(1:4)[whichDisableTF]
-               whichEnable  <- c(1:4)[!whichDisableTF]
+             } else {
+               return(character(0))
              }
-##sm <<- rec_env$summarised_data
+           }
+           observeEvent(input$TreatmentType, {
+             
+             #extract newest selection by identifying which values are in a that have not been previously selected
+             # whichDisable <-  c() ## Initialize the object
+             # whichEnable <-  c() ## Initialize the object
+            
+             whichDisableTF <- find_disableTF()
+             whichDisable <- c(1:4)[whichDisableTF]
+             whichEnable  <- c(1:4)[!whichDisableTF]
 
              #create object that identifies newly selected checkbox (syntax found using selectorgadget)
              subElement <- paste0("#CageSel .checkbox:nth-child(", whichDisable,") label")
@@ -388,9 +391,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                
                rec_env$new.model.settings$do_treat <- 0
                rec_env$new.model.settings$do_addclf <- 0
-              # mmm <<- rec_env$new.model.settings
-               #reset("HowTreat")  ## Tabort
-               #reset("CageSel")
+
                subElement <- paste0("#CageSel .checkbox:nth-child(", c(1:4),") label")
                shinyjs::enable(selector=subElement)
                #store all selected checkboxes
@@ -399,8 +400,9 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                  session = session, 
                  inputId = "CageSel",
                  selected = c(1:4)
+                 
                )
-               reset("TreatmentType")
+               #reset("TreatmentType")
                reset("Cleaner2")
                
                rec_env$t <- SV_T$t_stop
@@ -554,37 +556,30 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                  break
                }
                
-               ## Summary modal
+               ## Summary model
                output$oppsumm <- renderDataTable(
                  t(rec_env$oppsDF)
               
                )
               
              }  ## End while loop
-             
 
+# Update treatment options ------------------------------------------------
+
+             whichDisableTF <- find_disableTF()
+             whichDisable <- c(1:4)[whichDisableTF]
+             disabled_choices <- character()
+             if(length(whichDisable) == 4) disabled_choices <- c(disabled_choices, "EMcht")
+             
              if((rec_env$SV$W.SAL[rec_env$t, 1] < 1)) {
-               updateRadioGroupButtons( ## Update treatment type
-                 session = session, 
-                 inputId = "TreatmentType",
-                 selected = character(0), 
-                 disabledChoices = c('therm')
-               )
-             } else {
-               updateRadioGroupButtons( ## Update treatment type
-                 session = session, 
-                 inputId = "TreatmentType",
-                 selected = character(0)
-               )
+               disabled_choices <- c(disabled_choices, "therm")# Disabling the choice for ikkemedikamentell behandling under ett kilo fiskevekt
              }
-             ##svsv <<- rec_env$SV
-            # if(sum(rec_env$summarised_data$EMcht) > 0) disable(selector = "#TreatmentType button:eq(1)") ## Disabling the choice for forbehandling etter en behandling
-             # if((rec_env$SV$W.SAL[rec_env$t, 1] < 1)) {
-             #   disable(selector = "#TreatmentType button:eq(0)")
-             # } else {
-             #   enable(selector = "#TreatmentType button:eq(0)")
-             # }
-             ## Disabling the choice for ikkemedikamentell behandling under ett kilo fiskevekt
+             updateRadioGroupButtons( ## Update treatment type
+               session = session, 
+               inputId = "TreatmentType",
+               selected = character(0), 
+               disabledChoices = disabled_choices
+             )
            }) ## End observe event
            
            observeEvent(input$secCount, {
