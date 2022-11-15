@@ -1,3 +1,6 @@
+
+# Packages ----------------------------------------------------------------
+
 library(shiny)
 library(shinydashboard)
 library(ggplot2)
@@ -11,20 +14,28 @@ library(shinycssloaders)
 library(DT)
 library(shinyWidgets)
 
-Sys.setlocale(locale='no_NB.utf8')  ## For at det skal virke på maskina til Lars
+# Sys.setlocale(locale='no_NB.utf8')  ## For at det skal virke på maskina til Lars
 header <- dashboardHeader(title = "Lusestrategispill")
 
-## Design på sidepanelet
+
+# Design sidepanel --------------------------------------------------------
+
 sidebar <- dashboardSidebar(
   sidebarMenu(
     id = "tabs",
     menuItem("Info om spillet", tabName = "info", icon = icon("info")),
     menuItem("Oppdrettsmiljø", tabName = "valg", icon = icon("fish")),
-    menuItem("Lusespill", tabName = "spill", icon = icon("gamepad")),
-    menuItem("Tidsserier", tabName = "grafer", icon = icon("chart-area"))
+    menuItemOutput("nyfane1"),
+    menuItemOutput("nyfane2")
+    # menuItem("Lusespill", tabName = "spill", icon = icon("gamepad")),
+    # menuItem("Tidsserier", tabName = "grafer", icon = icon("chart-area"))
   )
 )
 
+
+# Design main panel -------------------------------------------------------
+
+## Design Info tab ---------------------------------------------------------
 
 body <- dashboardBody(
   shinyjs::useShinyjs(),
@@ -55,10 +66,9 @@ body <- dashboardBody(
                    )
             )),
 
-# Design på hovedpanelet --------------------------------------------------
 
-              
-            
+## Design Oppdrettsmiljø tab -----------------------------------------------
+
     tabItem("valg",
             box(width = 5, height = 500,
                 selectInput("PO", "Velg produksjonsområde",
@@ -102,6 +112,10 @@ body <- dashboardBody(
                 ),
             box(width = 7, height = 500,
                 leafletOutput("Map"))),
+
+
+## Design Spill tab --------------------------------------------------------
+
     tabItem("spill",
             fluidRow(
               box(width = 4,
@@ -153,6 +167,10 @@ body <- dashboardBody(
                     size = "large",
                     withSpinner(
                       dataTableOutput("oppsumm")))),
+
+
+## Design Tidsserier tab ---------------------------------------------------
+
     tabItem("grafer",
             fluidRow(
               actionButton("switchSpill2", "Tilbake til spillet"),
@@ -163,11 +181,14 @@ body <- dashboardBody(
             
     )
 
-
-# Server code and implementation of user interface ------------------------
+# Server code -------------------------------------------------------------
 
 shinyApp(ui = dashboardPage(header, sidebar, body), 
          server = function(input, output, session){
+           
+
+# Sourcing Modelfunctions and init ----------------------------------------
+
            ## Load functions
            source("ModelFunctions_v3b.R", local = TRUE)
            
@@ -179,7 +200,24 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
            # observeEvent updateS model settings
            # update rec_env$default.model.settings
            
+
+# Update sidepanel menu ---------------------------------------------------
+
+           # Update sidebarmenu after clicking "Godkjenn valgene og vis kart")
+           output$nyfane1 <- renderMenu({
+             if( input$Next == TRUE )
+               menuItem("Lusespill", tabName = "spill", icon = icon("gamepad"))
+           })
            
+           output$nyfane2 <- renderMenu({
+             if( input$Next == TRUE )
+               menuItem("Tidsserier", tabName = "grafer", icon = icon("chart-area"))
+           })
+
+           
+
+# Creating reactive object ------------------------------------------------
+
            ## set_reactive_values in model settings
            rec_env <- reactiveValues(default.model.settings = default.model.settings,
                                      oppsDF = oppsDF,
@@ -198,6 +236,9 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
            observeEvent(input$Next, {
              shinyjs::show("switchSpill")
              
+
+# Storing user input in reactive object -----------------------------------
+
              ## Brukervalg
              rec_env$default.model.settings$Region <- input$PO
              rec_env$default.model.settings$start.mo <- as.numeric(input$StartTime)
@@ -226,6 +267,9 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
              rec_env$t <- t
              rec_env$new.model.settings <- rec_env$start.model.settings
              
+
+# Updating SV -------------------------------------------------------------
+
              ## First and second lice count at t = 1 
              SV_updated <- update.licecount1(SV_local = rec_env$SV, 
                                              RE_local = rec_env$RE, 
@@ -263,6 +307,9 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
              rec_env$summarised_data <- summarise_data(model.settings = rec_env$new.model.settings,
                                                 SV_local = rec_env$SV)
              
+
+# Creating map of selected location ---------------------------------------
+
              ## Leaflet map
              # Transform to latlong
              pkt <- data.frame(utmx = rec_env$CO[1],
@@ -285,7 +332,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
            })
            
 
-# Spillfane ---------------------------------------------------------------
+## Spillfane ---------------------------------------------------------------
            
            observeEvent(input$switchSpill, {
              updateTabsetPanel(session, "tabs",selected = "spill")
@@ -297,7 +344,8 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
            # print(dato$d)
            
            
-           ## Disable treatment options -----------------------------------------------
+           ### Disable treatment options -----------------------------------------------
+           
            #initialize reactive values (will use to store selected boxes to identify newest selection)
            rv <- reactiveValues()
            #initialize selected boxes to NULL
@@ -353,22 +401,18 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
            observeEvent(input$Go,{
 
 
+### Treatment or not --------------------------------------------------------
 
-
-             ## LUSESPILL
-             
-             # rec_env$new.model.settings$do_treat <- if( input$HowTreat == "ingen") {
-             #   0
-             # } else {
-             #   1
-             # }
-#################### Velger parametere for behandling
+          # Velger parametere for behandling
              if(is.null(input$TreatmentType)) {             
                rec_env$new.model.settings$do_treat <- 0
              } else {
                rec_env$new.model.settings$do_treat <- 1
              }
-###################             
+
+
+#### Updating reactive object (rec_env) --------------------------------------
+                         
              rec_env$new.model.settings$trt.type <- input$TreatmentType
              rec_env$new.model.settings$do_addclf <- input$Cleaner2
              rec_env$new.model.settings$which_treat <- as.numeric(input$CageSel)
@@ -379,6 +423,10 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
              #  input$CageSel
              #}
              ## ccc <<- input$CageSel
+             
+
+### Simulations (while loop) ------------------------------------------------
+
              while( rec_env$t < rec_env$new.model.settings$Ndays ) {
              
                SV_T <- update_SV(SV_local = rec_env$SV, 
@@ -413,7 +461,9 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                rec_env$mort <- TreatMort(SV = rec_env$SV)
                
                
-               ## Oppdaterer oppsummeringstabell
+
+#### Updating summary table --------------------------------------------------
+
                rec_env$oppsDF$mort <- rec_env$mort
                rec_env$oppsDF$ikke_med_beh <- sum(rec_env$SV$use.therm)
                rec_env$oppsDF$for_beh <- sum(rec_env$SV$use.EMcht)
@@ -426,6 +476,10 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                ## Oppdaterer data
                rec_env$summarised_data <- summarise_data(SV_local = rec_env$SV, 
                                                   model.settings = rec_env$new.model.settings)
+               
+
+### Updating lice_df --------------------------------------------------------
+
                
                # if( input$Continue == "week" | input$Continue == "threshold" ) {
                ## Ekstraherer antall hunnlus
@@ -442,7 +496,9 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                
                rec_env$dato <- dmy(paste(15, paste0(0, rec_env$new.model.settings$start.mo), year(today()), sep = "-"))
                
-               ## Info og valueboxes
+
+### Info and Valueboxes -----------------------------------------------------
+
                a1 <- 10^(rec_env$lice_df$af1) - logoffset
                output$af1 <- renderInfoBox({
                  infoBox("Hunnlus",
@@ -546,6 +602,8 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                                10^(rec_env$lice_df$af3) - logoffset +
                                10^(rec_env$lice_df$af4) - logoffset)/4
                
+
+### Flow: week or second count or to lice boundary --------------------------
                
                if( input$Continue == "week" | input$Continue == "secCount" ) {
                  break
@@ -562,6 +620,9 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
               
              }  ## End while loop
              
+
+### Medikamentell treatment available or not --------------------------------
+
 
              if((rec_env$SV$W.SAL[rec_env$t, 1] < 1)) {
                updateRadioGroupButtons( ## Update treatment type
@@ -587,6 +648,9 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
              ## Disabling the choice for ikkemedikamentell behandling under ett kilo fiskevekt
            }) ## End observe event
            
+
+### Second count ------------------------------------------------------------
+
            observeEvent(input$secCount, {
              t <- rec_env$t
              rec_env$lice_df$af1 <- rec_env$summarised_data %>% filter(day == t & cage == "1") %>% select(Y2.AF)
@@ -707,7 +771,8 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
            #   )
            # })
            
-           ## GRAFER
+
+## Tidsserier tab ----------------------------------------------------------
            
            observeEvent(input$switchSpill2, {
              updateTabsetPanel(session, "tabs",selected = "spill")
