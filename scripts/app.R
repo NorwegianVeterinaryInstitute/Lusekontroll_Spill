@@ -169,7 +169,8 @@ body <- dashboardBody(
               actionButton("switchSpill2", "Tilbake til spillet"),
               plotOutput("sim_plot"),
               plotOutput("temp"),
-              tableOutput("summarise")))
+              tableOutput("summarise"),
+              tableOutput("oppsummDF")))
             )
             
     )
@@ -244,6 +245,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
              rec_env$oppsDF$skirt <- input$Skirt
              rec_env$oppsDF$skirt_start <- as.numeric(input$FromSkirt)
              rec_env$oppsDF$leppe <- input$Cleaner
+             if (input$Cleaner == 1) rec_env$oppsDF$andel_leppe <- rec_env$default.model.settings$clfratio
              
              
              ## Create rec_env$SV and rec_env$RE start conditions
@@ -398,6 +400,8 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
              rec_env$new.model.settings$trt.type <- input$TreatmentType
              rec_env$new.model.settings$do_addclf <- input$Cleaner2
              rec_env$new.model.settings$which_treat <- as.numeric(input$CageSel)
+             
+             if (input$Cleaner2 == 1) rec_env$oppsDF$andel_leppe <- rec_env$oppsDF$andel_leppe + rec_env$default.model.settings$clfratio
              
 
 ### Simulations (while loop) ------------------------------------------------
@@ -751,6 +755,8 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                geom_point(data = rec_env$summarised_data %>% filter(!is.nan(Y.AF)),
                           mapping = aes(day, seatemp))
            })
+           
+           output$oppsummDF <- renderTable({rec_env$oppsDF})
            
            output$summarise <- renderTable({rec_env$summarised_data})
            
