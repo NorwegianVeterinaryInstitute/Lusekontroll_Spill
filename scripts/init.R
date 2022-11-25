@@ -298,7 +298,8 @@ oppsDF <- data.frame(poeng = NA,
                      start = NA,
                      skirt = NA,
                      skirt_start = NA,
-                     leppe = NA)
+                     leppe = NA,
+                     andel_leppe = 0)
 
 
 # ## Run summarise_data()
