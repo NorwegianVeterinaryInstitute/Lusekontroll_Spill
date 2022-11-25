@@ -27,8 +27,6 @@ sidebar <- dashboardSidebar(
     menuItem("Oppdrettsmiljø", tabName = "valg", icon = icon("fish")),
     menuItemOutput("nyfane1"),
     menuItemOutput("nyfane2")
-    # menuItem("Lusespill", tabName = "spill", icon = icon("gamepad")),
-    # menuItem("Tidsserier", tabName = "grafer", icon = icon("chart-area"))
   )
 )
 
@@ -125,11 +123,6 @@ body <- dashboardBody(
                                       "Medikamentell" = "HPcht"),
                                     direction = "vertical",
                                     selected = character(0)),
-                  # radioButtons("HowTreat", "Behandle?:",
-                  #              c("Nei, ingen behandling" = "ingen",
-                  #                "Ja, alle merder" = "alle",
-                  #                "Ja, merdvis" = "merdvis"),
-                  #              selected = "ingen"),
                   checkboxGroupInput("CageSel", "Hvilke merder vil du behandle?",
                                      c("Merd 1" = "1",
                                        "Merd 2" = "2",
@@ -256,14 +249,13 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
              ## Create rec_env$SV and rec_env$RE start conditions
              # start with default model settings
              rec_env$start.model.settings <- rec_env$default.model.settings
-             rec_env$SV_RE_start <- create.SV_RE_start(EnvList_local = EnvList,                # Thijs: reactiveValues()? Or should this run before app runs?
+             rec_env$SV_RE_start <- create.SV_RE_start(EnvList_local = EnvList,
                                                model.settings = rec_env$start.model.settings)
              
              # extract rec_env$SV and rec_env$RE from rec_env$SV_RE_start
              rec_env$SV <- rec_env$SV_RE_start$SV
              rec_env$RE <- rec_env$SV_RE_start$RE
              rec_env$CO <- round(rec_env$SV_RE_start$Coordinates)
-             # t <- 1                 # moved to init.R
              rec_env$t <- t
              rec_env$new.model.settings <- rec_env$start.model.settings
              
@@ -275,8 +267,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                                              RE_local = rec_env$RE, 
                                              t_local = rec_env$t, 
                                              model.settings = rec_env$new.model.settings
-                                             # ,...                                     # 28.02.22 Kommentert ut av Thijs 
-             )
+                                             )
              
              rec_env$SV <- SV_updated
              
@@ -284,15 +275,13 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                                              RE_local = rec_env$RE, 
                                              t_local = rec_env$t, 
                                              model.settings = rec_env$new.model.settings
-                                             #,...                                      # 28.02.22 Kommentert ut av Thijs
-             )
+                                             )
              
              rec_env$SV <- SV_updated
              
              ## Lice skirt
              SV_updated <- update.skirt(SV_local = rec_env$SV, t_local = rec_env$t, 
                                         model.settings = rec_env$new.model.settings)
-             # rec_env$new.model.settings$do_applyskirt <- 1
              rec_env$SV <- SV_updated
              
              # Add cleaner fish from start of simulation?
@@ -314,7 +303,6 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
              # Transform to latlong
              pkt <- data.frame(utmx = rec_env$CO[1],
                                utmy = rec_env$CO[2]) 
-             # names(pkt) <- c("utmx", "utmy")
              pkt_ <- st_as_sf(x = pkt,
                               coords = c("utmx", "utmy"),
                               crs = 32633) %>% 
@@ -338,11 +326,6 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
              updateTabsetPanel(session, "tabs",selected = "spill")
            })
            if(t < 2) disable(selector = "#TreatmentType button:eq(0)") 
-           # ## Dato
-           # dato <- reactiveValues(d = dmy(paste(15, paste0(0, rec_env$new.model.settings$start.mo), year(today()), sep = "-")))
-           # dato$d <- dato$d + t
-           # print(dato$d)
-           
            
            ### Disable treatment options -----------------------------------------------
            
@@ -365,10 +348,6 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
            }
            observeEvent(input$TreatmentType, {
              
-             #extract newest selection by identifying which values are in a that have not been previously selected
-             # whichDisable <-  c() ## Initialize the object
-             # whichEnable <-  c() ## Initialize the object
-            
              whichDisableTF <- find_disableTF()
              whichDisable <- c(1:4)[whichDisableTF]
              whichEnable  <- c(1:4)[!whichDisableTF]
@@ -419,13 +398,6 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
              rec_env$new.model.settings$trt.type <- input$TreatmentType
              rec_env$new.model.settings$do_addclf <- input$Cleaner2
              rec_env$new.model.settings$which_treat <- as.numeric(input$CageSel)
-               #if ( input$HowTreat == "alle") {
-             #   ## Ta bort if-else-statement
-             #   "all"
-             # } else {
-             #  input$CageSel
-             #}
-             ## ccc <<- input$CageSel
              
 
 ### Simulations (while loop) ------------------------------------------------
@@ -450,7 +422,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                  selected = c(1:4)
                  
                )
-               #reset("TreatmentType")
+               
                reset("Cleaner2")
                
                rec_env$t <- SV_T$t_stop
@@ -483,7 +455,6 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
 ### Updating lice_df --------------------------------------------------------
 
                
-               # if( input$Continue == "week" | input$Continue == "threshold" ) {
                ## Ekstraherer antall hunnlus
                rec_env$lice_df$af1 <- rec_env$summarised_data %>% filter(day == rec_env$t & cage == "1") %>% select(Y.AF)
                rec_env$lice_df$af2 <- rec_env$summarised_data %>% filter(day == rec_env$t & cage == "2") %>% select(Y.AF)
@@ -493,8 +464,6 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                rec_env$lice_df$om2 <- rec_env$summarised_data %>% filter(day == rec_env$t & cage == "2") %>% select(Y.OM)
                rec_env$lice_df$om3 <- rec_env$summarised_data %>% filter(day == rec_env$t & cage == "3") %>% select(Y.OM)
                rec_env$lice_df$om4 <- rec_env$summarised_data %>% filter(day == rec_env$t & cage == "4") %>% select(Y.OM)
-               
-               # reset("Continue")
                
                rec_env$dato <- dmy(paste(15, paste0(0, rec_env$new.model.settings$start.mo), year(today()), sep = "-"))
                
@@ -755,14 +724,6 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
              })
              
            })
-           
-           # observeEvent(input$Summary, {
-           #   observe(
-           #     if( t == rec_env$new.model.settings$Ndays ) {
-           #       shinyjs::enable("Summary")
-           #     } 
-           #   )
-           # })
            
 
 ## Tidsserier tab ----------------------------------------------------------
