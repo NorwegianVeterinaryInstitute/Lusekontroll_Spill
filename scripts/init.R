@@ -1,5 +1,5 @@
 
-Sys.setlocale(locale='no_NB.utf8')
+
 # Initial model setting and intialise simulation -------
 library(shiny)
 library(shinydashboard)

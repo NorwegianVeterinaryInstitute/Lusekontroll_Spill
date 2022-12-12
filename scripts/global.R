@@ -16,7 +16,7 @@
 
 
 ############################################################################
-Sys.setlocale(locale='no_NB.utf8')
+
 ## Clear work space
 #rm(list=ls())
 #library(R6)
