@@ -1,4 +1,4 @@
-
+Sys.setlocale(locale='no_NB.utf8')  ## For at det skal virke på maskina til Lars
 # Packages ----------------------------------------------------------------
 
 library(shiny)
@@ -14,7 +14,7 @@ library(shinycssloaders)
 library(DT)
 library(shinyWidgets)
 
-# Sys.setlocale(locale='no_NB.utf8')  ## For at det skal virke på maskina til Lars
+
 header <- dashboardHeader(title = "Lusestrategispill")
 
 
@@ -42,7 +42,7 @@ body <- dashboardBody(
             h1("Lusestrategispill"),
             p("Lusespillet simulerer lakselussituasjonen i et oppdrettsanlegg gjennom en produksjonssyklus på 18 måneder."),
             br(),
-            p("Du velger område og måned for produksjonsstart, så velges en tilfeldig lokasjon med tilhørende ytre miljøforhold. De ytre miljøforholdene som påvirker luseutviklingen er temperatur og smittepress. Antall laks er i anlegget er 1 million, som du fordeler utover et selvvalgt antall merder."),
+            p("Du velger område og måned for produksjonsstart, så velges en tilfeldig lokalitet med tilhørende ytre miljøforhold. De ytre miljøforholdene som påvirker luseutviklingen er temperatur og smittepress. Antall laks er i anlegget er 1 million, som fordeles ut over fire merder."),
             br(),
             p("Før du starter produksjonen, velger du om du vil bruke luseskjørt eller sette ut rensefisk. Luseskjørt stopper halvparten av luselarvene som kommer fra andre anlegg de første seks månedene. Antallet rensefisk som settes ut er 5 % av antallet laks, men antallet minker utover i produksjonssyklusen – og spesielt raskt hvis du bruker termisk eller mekanisk lusebehandling."),
             br(),
@@ -54,11 +54,13 @@ body <- dashboardBody(
             p(strong("Referanse:")),
             p("Aldrin M, Huseby RB, Stien A, Grøntvedt RN, Viljugrein H, Jansen PA (2017) A stage-structured Bayesian hierarchical model for salmon lice populations at individual salmon farms - Estimated from multiple farm data sets. Ecol Mod 359:333-348"),
             tags$a(href="https://doi.org/10.1016/j.ecolmodel.2017.05.019", "Link til artikkel"),
-            h2("Poengberegning (ikke kodet inn ennå)"),
-            p(HTML(paste("1) Behandling gir minuspoeng",
-                   "2) FÔRBEHANDLING etter at laksen har nådd en vekt på 2 kg gir ekstra trekk",
-                   "3) IKKE-MEDIKAMENTELL behandling før laksen har oppnådd en vekt på 1,5 kg gir ekstra poengtrekk",
-                   "4)blabla", 
+            h2("Poengberegning"),
+            p(HTML(paste("1) Du får 400 poeng per uke",
+                   "2) Behandling gir poengtrekk, 25 poeng trekk for fôrbehandling, og 50 poeng trekk for annen behandling",
+                   "3) FÔRBEHANDLING er kun tillatt en gang per merd per generasjon",
+                   "4) IKKE-MEDIKAMENTELL behandling er ikke tillatt før laksen har oppnådd en vekt på 1,0 kg",
+                   "5) Du trekkes 350 poeng for å overskride lusegrensa, pluss ekstra trekk for størrelsen på overskridelsen",
+                   "6) Poengberegning er under utvikling, og vil bli mer avansert etterhvert", 
                    sep = "<br/>"
                         )
                    )
@@ -447,14 +449,19 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                rec_env$oppsDF$for_beh <- sum(rec_env$SV$use.EMcht)
                rec_env$oppsDF$med_beh <- sum(rec_env$SV$use.HPcht)
                
-               ## Beregner poeng
-               rec_env$oppsDF$poeng <- 100 - (rec_env$mort*100) - sum(rec_env$SV$use.therm) - sum(rec_env$SV$use.EMcht) - sum(rec_env$SV$use.HPcht)
+
                
                
                ## Oppdaterer data
                rec_env$summarised_data <- summarise_data(SV_local = rec_env$SV, 
                                                   model.settings = rec_env$new.model.settings)
-               
+
+### Updating points ---------------------------------------------------------
+               rec_env$oppsDF$poeng <- sum(rec_env$summarised_data$points_week_cage, na.rm = T) - 
+                 400 - 
+                 threshold_penalty(rec_env$summarised_data)
+               ## Gammel poengberegning
+               #rec_env$oppsDF$poeng <- 100 - (rec_env$mort*100) - sum(rec_env$SV$use.therm) - sum(rec_env$SV$use.EMcht) - sum(rec_env$SV$use.HPcht)
 
 ### Updating lice_df --------------------------------------------------------
 
@@ -743,7 +750,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                geom_line(aes(day, log10(llimit)), colour = "green", size = 0.75, linetype = 2) +
                geom_point(shape = 1, colour = "blue") +
                geom_point(aes(day, Y.AF), shape = 1, colour = "red") +
-               geom_vline(xintercept = rec_env$summarised_data$treatment + 1, colour = "rosybrown") +
+               geom_vline(aes(xintercept = rec_env$summarised_data$treatment + 1), colour = "rosybrown") +
                facet_wrap(~cage,  ncol=2)
              
            })

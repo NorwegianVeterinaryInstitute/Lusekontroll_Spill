@@ -1,3 +1,5 @@
+
+Sys.setlocale(locale='no_NB.utf8')
 # Initial model setting and intialise simulation -------
 library(shiny)
 library(shinydashboard)
@@ -10,7 +12,7 @@ library(shinyjs)
 library(shinyBS)
 library(shinycssloaders)
 library(DT)
-# Sys.setlocale(locale='no_NB.utf8')
+
 ## Load data
 Coef <- readRDS("Coef20211209.Rds")
 load("EnvListShort.RData")
@@ -89,7 +91,7 @@ summarise_data <- function(SV_local = SV,
   
   logoffset <- .01
   log_transform <- function(lus, cage_no) {
-    log10(logoffset + lus[, cage_no]/SV$n.SAL[, cage_no])
+    log10(logoffset + lus[, cage_no]/SV$n.SAL[, cage_no]) ## Skal n.Sal bort?
   }
   shift_treatment <- function(treatment, 
                               cage_no) 
@@ -101,6 +103,7 @@ summarise_data <- function(SV_local = SV,
     data.frame(Y.CH  = log_transform(lus = SV$Y.CH, cage_no = x)) %>% 
       mutate(Y.OM  = log_transform(lus = SV$Y.OM, cage_no = x)) %>% 
       mutate(Y.AF  = log_transform(lus = SV$Y.AF, cage_no = x)) %>% 
+  ##   # mutate(Y.AFF  = SV$Y.AF[, x]) %>% 
       mutate(Y2.CH = log_transform(lus = SV$Y2.CH, cage_no = x)) %>% 
       mutate(Y2.OM = log_transform(lus = SV$Y2.OM, cage_no = x)) %>% 
       mutate(Y2.AF = log_transform(lus = SV$Y2.AF, cage_no = x)) %>% 
@@ -116,13 +119,24 @@ summarise_data <- function(SV_local = SV,
       mutate(use.DMcht  = shift_treatment(SV$use.DMcht, x)) %>% 
       mutate(use.AZcht  = shift_treatment(SV$use.AZcht, x)) %>%
       mutate(use.EMcht  = shift_treatment(SV$use.EMcht, x)) %>%      # 11. mar: la til EMcht
-      mutate(EMcht  = shift_treatment(SV$use.EMcht, x)) %>%          # lagt inn 4. nov - for mulighet for disabling
       mutate(use.DBcht  = shift_treatment(SV$use.DBcht, x)) %>% 
       mutate(use.therm  = shift_treatment(SV$use.therm, x)) %>% 
       mutate(use.freshw = shift_treatment(SV$use.freshw, x)) %>% 
       mutate(use.mech   = shift_treatment(SV$use.mech, x)) %>% 
       mutate(use.fx     = shift_treatment(SV$use.fx, x)) %>% 
-      filter(((day)%%7 == 0) | (day == 1))                           # 28.02.22 fjernet -1 fra day
+      mutate(EMcht  = shift_treatment(SV$use.EMcht, x)) %>%          # lagt inn 4. nov - for mulighet for disabling
+      mutate(therm  = shift_treatment(SV$use.therm, x)) %>%          # Lagt til 8. des - for poeng
+      mutate(HPcht  = shift_treatment(SV$use.HPcht, x)) %>%          # Lagt til 8. des - for poeng 
+      filter(((day)%%7 == 0) | (day == 1)) %>%                       # 28.02.22 fjernet -1 fra day
+      mutate(week_simulated = !is.na(Y.CH)) %>% 
+      mutate(running_week = cumsum(week_simulated)) %>% 
+      mutate(penalty_feed   = EMcht*25) %>%                           # Trekk for behandling
+      mutate(penalty_medici = HPcht*50) %>%                           # Trekk for behandling
+      mutate(penalty_therm  = therm*50) %>%                           # Trekk for behandling
+      #mutate(penalty_lice   = (Y.AF > -0.29) * 20) %>%                # Trekk for lus
+      mutate(penalty_tot    = penalty_feed + penalty_medici + penalty_therm) %>% 
+      mutate(week_pay_cage  = 100) %>% 
+      mutate(points_week_cage = (week_pay_cage - penalty_tot) * week_simulated) 
   }
   ) %>% 
     do.call(rbind, .) %>% 
@@ -130,9 +144,26 @@ summarise_data <- function(SV_local = SV,
     # mutate(treatment = (use.HPcht + use.DMcht + use.AZcht + use.DBcht + use.therm + use.freshw + use.mech + use.fx != 0)) %>%
     dplyr::select(!starts_with("use")) %>% 
     mutate(treatment = na_if(treatment, 0))
-  
-  
-  
+}
+
+## function that calculates penalty for average lice counts above threshold
+threshold_penalty <- function(summarised_data_) {
+  DF <- summarised_data_ %>% 
+    mutate(Y.AFF = 10^(Y.AF) - logoffset) %>% 
+    filter(week_simulated) %>% 
+    dplyr::select(Y.AFF, cage, running_week, llimit) %>% 
+    group_by(running_week) %>% 
+    summarise(
+      running_week = running_week,
+      Y.AFF = mean(Y.AFF),
+      llimit = llimit
+    ) %>% 
+    ungroup %>% 
+    mutate(above_threshold = (Y.AFF > llimit)) %>% 
+    mutate(penalty = (above_threshold * 350) + (Y.AFF-0.5) * 50) %>% 
+    dplyr::select(penalty) %>% 
+    sum %>% 
+    return
 }
 
 ## Dataramme med hunnlustall
