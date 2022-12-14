@@ -1,4 +1,4 @@
-Sys.setlocale(locale='no_NB.utf8')  ## For at det skal virke på maskina til Lars
+
 # Packages ----------------------------------------------------------------
 
 library(shiny)
@@ -331,6 +331,101 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
            })
            if(t < 2) disable(selector = "#TreatmentType button:eq(0)") 
            
+
+# Insert valueboxes with initial values -----------------------------------
+
+           output$af1 <- renderInfoBox({
+             infoBox("Hunnlus",
+                     subtitle = "Merd 1",
+                     0,
+                     icon = icon_af(0),
+                     color = color_af(0),
+                     fill = TRUE)
+           })
+           
+           output$om1 <- renderInfoBox({
+             infoBox("Andre",
+                     subtitle = "Merd 1",
+                     0,
+                     icon = icon_om(0),
+                     color = color_om(0))
+           })
+           
+           output$af2 <- renderInfoBox({
+             infoBox("Hunnlus",
+                     subtitle = "Merd 2",
+                     0,
+                     icon = icon_af(0),
+                     color = color_af(0),
+                     fill = TRUE)
+           })
+           
+           output$om2 <- renderInfoBox({
+             infoBox("Andre",
+                     subtitle = "Merd 2",
+                     0,
+                     icon = icon_om(0),
+                     color = color_om(0))
+           })
+           
+           output$af3 <- renderInfoBox({
+             infoBox("Hunnlus",
+                     subtitle = "Merd 3",
+                     0,
+                     icon = icon_af(0),
+                     color = color_af(0),
+                     fill = TRUE)
+           })
+           
+           output$om3 <- renderInfoBox({
+             infoBox("Andre",
+                     subtitle = "Merd 3",
+                     0,
+                     icon = icon_om(0),
+                     color = color_om(0))
+           })
+           
+           output$af4 <- renderInfoBox({
+             infoBox("Hunnlus",
+                     subtitle = "Merd 4",
+                     0,
+                     icon = icon_af(0),
+                     color = color_af(0),
+                     fill = TRUE)
+           })
+           
+           output$om4 <- renderInfoBox({
+             infoBox("Andre",
+                     subtitle = "Merd 4",
+                     0,
+                     icon = icon_om(0),
+                     color = color_om(0))
+           })
+           output$meanaf <- renderValueBox({
+             valueBox("Snitt",
+                      paste0("Hunnlus: ", 0, ", ", 
+                             "Andre: ", 0, ", ", 
+                             "Laksevekt: ", 0),
+                      icon = icon("exclamation")
+             )
+           })
+           
+           output$day <- renderValueBox({
+             valueBox(paste0("Dag ", 0),
+                      paste0("Dato: ", format(as.Date(paste0("15/", input$StartTime), "%d/%m")), ", ", 
+                             "Lusegrense: ", rec_env$SV$Lusegrense[1], ", ",
+                             "Temperatur: ", round(rec_env$SV$ST[1],1), " C"),
+                      icon = icon("calendar-alt")
+             )
+           })
+           
+           output$points <- renderValueBox({
+             valueBox("Poeng",
+                      0,
+                      icon = icon("crosshairs"))
+           })           
+           
+           
            ### Disable treatment options -----------------------------------------------
            
            #initialize reactive values (will use to store selected boxes to identify newest selection)
@@ -465,23 +560,21 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
 
 ### Updating lice_df --------------------------------------------------------
 
-               
-               ## Ekstraherer antall hunnlus
-               rec_env$lice_df$af1 <- rec_env$summarised_data %>% filter(day == rec_env$t & cage == "1") %>% select(Y.AF)
-               rec_env$lice_df$af2 <- rec_env$summarised_data %>% filter(day == rec_env$t & cage == "2") %>% select(Y.AF)
-               rec_env$lice_df$af3 <- rec_env$summarised_data %>% filter(day == rec_env$t & cage == "3") %>% select(Y.AF)
-               rec_env$lice_df$af4 <- rec_env$summarised_data %>% filter(day == rec_env$t & cage == "4") %>% select(Y.AF)
-               rec_env$lice_df$om1 <- rec_env$summarised_data %>% filter(day == rec_env$t & cage == "1") %>% select(Y.OM)
-               rec_env$lice_df$om2 <- rec_env$summarised_data %>% filter(day == rec_env$t & cage == "2") %>% select(Y.OM)
-               rec_env$lice_df$om3 <- rec_env$summarised_data %>% filter(day == rec_env$t & cage == "3") %>% select(Y.OM)
-               rec_env$lice_df$om4 <- rec_env$summarised_data %>% filter(day == rec_env$t & cage == "4") %>% select(Y.OM)
-               
-               rec_env$dato <- dmy(paste(15, paste0(0, rec_env$new.model.settings$start.mo), year(today()), sep = "-"))
+              rec_env$lice_df$af1 <- rec_env$summarised_data %>% filter(day == rec_env$t & cage == "1") %>% select(Y.AF)
+              rec_env$lice_df$af2 <- rec_env$summarised_data %>% filter(day == rec_env$t & cage == "2") %>% select(Y.AF)
+              rec_env$lice_df$af3 <- rec_env$summarised_data %>% filter(day == rec_env$t & cage == "3") %>% select(Y.AF)
+              rec_env$lice_df$af4 <- rec_env$summarised_data %>% filter(day == rec_env$t & cage == "4") %>% select(Y.AF)
+              rec_env$lice_df$om1 <- rec_env$summarised_data %>% filter(day == rec_env$t & cage == "1") %>% select(Y.OM)
+              rec_env$lice_df$om2 <- rec_env$summarised_data %>% filter(day == rec_env$t & cage == "2") %>% select(Y.OM)
+              rec_env$lice_df$om3 <- rec_env$summarised_data %>% filter(day == rec_env$t & cage == "3") %>% select(Y.OM)
+              rec_env$lice_df$om4 <- rec_env$summarised_data %>% filter(day == rec_env$t & cage == "4") %>% select(Y.OM)
+              
+              rec_env$dato <- dmy(paste(15, paste0(0, rec_env$new.model.settings$start.mo), year(today()), sep = "-"))
                
 
 ### Info and Valueboxes -----------------------------------------------------
 
-               a1 <- 10^(rec_env$lice_df$af1) - logoffset
+              a1 <- 10^(rec_env$lice_df$af1) - logoffset
                output$af1 <- renderInfoBox({
                  infoBox("Hunnlus",
                          subtitle = "Merd 1",
@@ -578,6 +671,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                           round(rec_env$oppsDF$poeng, 2),
                           icon = icon("crosshairs"))
                })
+               renderText(threshold_penalty)
                
                break_val <- (  10^(rec_env$lice_df$af1) - logoffset +
                                10^(rec_env$lice_df$af2) - logoffset +
@@ -601,6 +695,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                )
               
              }  ## End while loop
+             
              
 
 ### Medikamentell treatment available or not --------------------------------
@@ -764,8 +859,8 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
            })
            
            output$oppsummDF <- renderTable({rec_env$oppsDF})
-           
            output$summarise <- renderTable({rec_env$summarised_data})
+           
            
          }
          # }

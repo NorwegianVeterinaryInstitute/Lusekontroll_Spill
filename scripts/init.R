@@ -136,7 +136,7 @@ summarise_data <- function(SV_local = SV,
       #mutate(penalty_lice   = (Y.AF > -0.29) * 20) %>%                # Trekk for lus
       mutate(penalty_tot    = penalty_feed + penalty_medici + penalty_therm) %>% 
       mutate(week_pay_cage  = 100) %>% 
-      mutate(points_week_cage = (week_pay_cage - penalty_tot) * week_simulated) 
+      mutate(points_week_cage = week_pay_cage * week_simulated - penalty_tot) 
   }
   ) %>% 
     do.call(rbind, .) %>% 
@@ -160,7 +160,7 @@ threshold_penalty <- function(summarised_data_) {
     ) %>% 
     ungroup %>% 
     mutate(above_threshold = (Y.AFF > llimit)) %>% 
-    mutate(penalty = (above_threshold * 350) + (Y.AFF-0.5) * 50) %>% 
+    mutate(penalty = (above_threshold * 350) + above_threshold *(Y.AFF-0.5) * 50) %>% 
     dplyr::select(penalty) %>% 
     sum %>% 
     return
