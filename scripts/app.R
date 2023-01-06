@@ -490,6 +490,12 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
              } else {
                rec_env$new.model.settings$do_treat <- 1
              }
+             
+### Limit amount of cleaner fish added --------------------------------------------------------
+             
+             if( rec_env$oppsDF$andel_leppe >= 0.10) {
+               shinyjs::disable("Cleaner2")
+             }
 
 
 #### Updating reactive object (rec_env) --------------------------------------
