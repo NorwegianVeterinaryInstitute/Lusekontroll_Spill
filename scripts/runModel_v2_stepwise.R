@@ -10,6 +10,7 @@
 rm(list=ls())
 
 ## Paths
+
 parameterpath <- "//vetinst.no\\dfs-felles/StasjonK/FAG/Akva/FoU-Prosjekter/32080 LuseKontroll/Analyser/Modellfiler fra NR/"
 scriptpath <-"//vetinst.no\\dfs-felles/StasjonK/FAG/Akva/FoU-Prosjekter/32080 LuseKontroll/Analyser/Scripts/"
 

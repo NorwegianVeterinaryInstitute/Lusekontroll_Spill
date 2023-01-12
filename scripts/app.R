@@ -125,13 +125,15 @@ body <- dashboardBody(
                                       "Medikamentell" = "HPcht"),
                                     direction = "vertical",
                                     selected = character(0)),
-                  checkboxGroupInput("CageSel", "Hvilke merder vil du behandle?",
-                                     c("Merd 1" = "1",
-                                       "Merd 2" = "2",
-                                       "Merd 3" = "3",
-                                       "Merd 4" = "4"),
-                                     selected = c('1', '2', '3', '4')
-                                     ),
+                  disabled(
+                    checkboxGroupInput("CageSel", "Hvilke merder vil du behandle?",
+                                       c("Merd 1" = "1",
+                                         "Merd 2" = "2",
+                                         "Merd 3" = "3",
+                                         "Merd 4" = "4"),
+                                       selected = c()
+                    )
+                  ),
 
                   radioButtons("Cleaner2", "Tilsette mer rensefisk?",
                                c("Nei" = 0,
@@ -330,10 +332,12 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
              updateTabsetPanel(session, "tabs",selected = "spill")
            })
            if(t < 2) disable(selector = "#TreatmentType button:eq(0)") 
-           
+      
+
 
 # Insert valueboxes with initial values -----------------------------------
-
+           #shinyjs::disable(selector="#CageSel")
+           
            output$af1 <- renderInfoBox({
              infoBox("Hunnlus",
                      subtitle = "Merd 1",
@@ -344,7 +348,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
            })
            
            output$om1 <- renderInfoBox({
-             infoBox("Andre",
+             infoBox("Bevegelige",
                      subtitle = "Merd 1",
                      0,
                      icon = icon_om(0),
@@ -361,7 +365,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
            })
            
            output$om2 <- renderInfoBox({
-             infoBox("Andre",
+             infoBox("Bevegelige",
                      subtitle = "Merd 2",
                      0,
                      icon = icon_om(0),
@@ -378,7 +382,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
            })
            
            output$om3 <- renderInfoBox({
-             infoBox("Andre",
+             infoBox("Bevegelige",
                      subtitle = "Merd 3",
                      0,
                      icon = icon_om(0),
@@ -395,7 +399,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
            })
            
            output$om4 <- renderInfoBox({
-             infoBox("Andre",
+             infoBox("Bevegelige",
                      subtitle = "Merd 4",
                      0,
                      icon = icon_om(0),
@@ -404,7 +408,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
            output$meanaf <- renderValueBox({
              valueBox("Snitt",
                       paste0("Hunnlus: ", 0, ", ", 
-                             "Andre: ", 0, ", ", 
+                             "Bevegelige: ", 0, ", ", 
                              "Laksevekt: ", 0),
                       icon = icon("exclamation")
              )
@@ -427,7 +431,6 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
            
            
            ### Disable treatment options -----------------------------------------------
-           
            #initialize reactive values (will use to store selected boxes to identify newest selection)
            rv <- reactiveValues()
            #initialize selected boxes to NULL
@@ -447,15 +450,19 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
            }
            observeEvent(input$TreatmentType, {
              
+             
+
+             #create object that identifies newly selected checkbox (syntax found using selectorgadget)
              whichDisableTF <- find_disableTF()
              whichDisable <- c(1:4)[whichDisableTF]
              whichEnable  <- c(1:4)[!whichDisableTF]
-
-             #create object that identifies newly selected checkbox (syntax found using selectorgadget)
-             subElement <- paste0("#CageSel .checkbox:nth-child(", whichDisable,") label")
              #disable single checkbox of group
-             
+             #print(subElement)
+ 
              if(input$TreatmentType == "EMcht") {
+               subElement <- paste0("#CageSel .checkbox:nth-child(", c(1:4),") label")
+               shinyjs::enable(selector=subElement)
+               subElement <- paste0("#CageSel .checkbox:nth-child(", whichDisable,") label")
                shinyjs::disable(selector=subElement)
                # #store all selected checkboxes
                rv$disableBoxes <- input$CageSel
@@ -464,8 +471,10 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                  inputId = "CageSel",
                  selected = whichEnable
                )
+               rm(subElement)
                
              } else {
+               subElement <- paste0("#CageSel .checkbox:nth-child(", c(1:4),") label")
                shinyjs::enable(selector=subElement)
                #store all selected checkboxes
                rv$disableBoxes <- input$CageSel
@@ -474,13 +483,15 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                  inputId = "CageSel",
                  selected = c(1:4)
                )
+               rm(subElement)
              }
              
              
            })
+     
            
            observeEvent(input$Go,{
-
+            
 
 ### Treatment or not --------------------------------------------------------
 
@@ -514,13 +525,14 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                rec_env$new.model.settings$do_addclf <- 0
 
                subElement <- paste0("#CageSel .checkbox:nth-child(", c(1:4),") label")
-               shinyjs::enable(selector=subElement)
+               shinyjs::disable(selector=subElement)
+               rm(subElement)
                #store all selected checkboxes
                rv$disableBoxes <- input$CageSel
                updateCheckboxGroupInput( ## cage selector
                  session = session, 
                  inputId = "CageSel",
-                 selected = c(1:4)
+                 selected = 0
                  
                )
                
@@ -552,9 +564,10 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                                                   model.settings = rec_env$new.model.settings)
 
 ### Updating points ---------------------------------------------------------
-               rec_env$oppsDF$poeng <- sum(rec_env$summarised_data$points_week_cage, na.rm = T) - 
-                 400 - 
-                 threshold_penalty(rec_env$summarised_data)
+               rec_env$oppsDF$poeng <- #standard_points(x = 
+                 sum(rec_env$summarised_data$points_week_cage, na.rm = T) -#, PO = input$PO, penalty_type = "no_treatment")
+               400 - 
+                 threshold_penalty(rec_env$summarised_data, PO = input$PO)
                ## Gammel poengberegning
                #rec_env$oppsDF$poeng <- 100 - (rec_env$mort*100) - sum(rec_env$SV$use.therm) - sum(rec_env$SV$use.EMcht) - sum(rec_env$SV$use.HPcht)
 
@@ -586,7 +599,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                
                o1 <- 10^(rec_env$lice_df$om1) - logoffset
                output$om1 <- renderInfoBox({
-                 infoBox("Andre",
+                 infoBox("Bevegelige",
                          subtitle = "Merd 1",
                          o1,
                          icon = icon_om(o1),
@@ -605,7 +618,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                
                o2 <- 10^(rec_env$lice_df$om2) - logoffset
                output$om2 <- renderInfoBox({
-                 infoBox("Andre",
+                 infoBox("Bevegelige",
                          subtitle = "Merd 2",
                          o2,
                          icon = icon_om(o2),
@@ -624,7 +637,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                
                o3 <- 10^(rec_env$lice_df$om3) - logoffset
                output$om3 <- renderInfoBox({
-                 infoBox("Andre",
+                 infoBox("Bevegelige",
                          subtitle = "Merd 3",
                          o3,
                          icon = icon_om(o3),
@@ -643,7 +656,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                
                o4 <- 10^(rec_env$lice_df$om4) - logoffset
                output$om4 <- renderInfoBox({
-                 infoBox("Andre",
+                 infoBox("Bevegelige",
                          subtitle = "Merd 4",
                          o4,
                          icon = icon_om(o4),
@@ -653,7 +666,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                output$meanaf <- renderValueBox({
                  valueBox("Snitt",
                           paste0("Hunnlus: ", round(((a1 + a2 + a3 + a4) / 4), 2), ", ", 
-                                 "Andre: ", round(((o1 + o2 + o3 + o4) / 4), 2), ", ", 
+                                 "Bevegelige: ", round(((o1 + o2 + o3 + o4) / 4), 2), ", ", 
                                  "Laksevekt: ", round(rec_env$SV$W.SAL[rec_env$t, 1], 1)),
                           icon = icon("exclamation"))
                })
@@ -743,7 +756,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
              
              o1 <- 10^(rec_env$lice_df$om1) - logoffset
              output$om1 <- renderInfoBox({
-               infoBox("Andre",
+               infoBox("Bevegelige",
                        subtitle = "Merd 1",
                        o1,
                        icon = icon_om(o1),
@@ -762,7 +775,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
              
              o2 <- 10^(rec_env$lice_df$om2) - logoffset
              output$om2 <- renderInfoBox({
-               infoBox("Andre",
+               infoBox("Bevegelige",
                        subtitle = "Merd 2",
                        o2,
                        icon = icon_om(o2),
@@ -781,7 +794,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
              
              o3 <- 10^(rec_env$lice_df$om3) - logoffset
              output$om3 <- renderInfoBox({
-               infoBox("Andre",
+               infoBox("Bevegelige",
                        subtitle = "Merd 3",
                        o3,
                        icon = icon_om(o3),
@@ -800,7 +813,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
              
              o4 <- 10^(rec_env$lice_df$om4) - logoffset
              output$om4 <- renderInfoBox({
-               infoBox("Andre",
+               infoBox("Bevegelige",
                        subtitle = "Merd 4",
                        o4,
                        icon = icon_om(o4),
@@ -810,7 +823,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
              output$meanaf <- renderValueBox({
                valueBox("Snitt",
                         paste0("Hunnlus: ", round(((a1 + a2 + a3 + a4) / 4), 2), ", ", 
-                               "Andre: ", round(((o1 + o2 + o3 + o4) / 4), 2), ", ", 
+                               "Bevegelige: ", round(((o1 + o2 + o3 + o4) / 4), 2), ", ", 
                                "Laksevekt: ", round(rec_env$SV$W.SAL[rec_env$t, 1], 1)),
                         icon = icon("exclamation"))
              })
@@ -838,6 +851,9 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
              updateTabsetPanel(session, "tabs",selected = "spill")
            })
            
+      
+           cust_labeller <- function(x) paste0("MERD ", x)
+   
            output$sim_plot <- renderPlot({
              ggplot(rec_env$summarised_data, aes(day, Y.OM)) +
                theme_classic() +
@@ -846,7 +862,8 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                geom_point(shape = 1, colour = "blue") +
                geom_point(aes(day, Y.AF), shape = 1, colour = "red") +
                geom_vline(aes(xintercept = rec_env$summarised_data$treatment + 1), colour = "rosybrown") +
-               facet_wrap(~cage,  ncol=2)
+               facet_wrap(~cage,  ncol=2, labeller = as_labeller(cust_labeller)) +
+               theme(text = element_text(size=20))               
              
            })
            
