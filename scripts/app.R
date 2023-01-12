@@ -70,7 +70,7 @@ body <- dashboardBody(
 ## Design Oppdrettsmiljø tab -----------------------------------------------
 
     tabItem("valg",
-            box(width = 5, height = 500,
+            box(width = 5, height = 600,
                 selectInput("PO", "Velg produksjonsområde",
                             choices = c("Produksjonsområde 2" = "PO2",
                                         "Produksjonsområde 3" = "PO3",
@@ -94,6 +94,7 @@ body <- dashboardBody(
                 radioButtons("Cleaner", "Vil du ha rensefisk fra start?",
                              c("Nei" = 0,
                                "Ja" = 1)),
+                textInput("Navn", "Navn på deg som spiller", value = "Anonym"),
                 radioButtons("Skirt", "Vil du bruke luseskjørt i anlegget?",
                              c("Nei" = 0,
                                "Ja" = 1)),
@@ -145,11 +146,14 @@ body <- dashboardBody(
                   actionButton("secCount", "Tell pånytt!"),
                   hidden(
                     actionButton("Summary", "Oppsummering")
+                  ),
+                  hidden(
+                    actionButton("highscore", "Highscore")
                   )
                   ),
               infoBoxOutput("af1"),
               infoBoxOutput("om1"),
-              infoBoxOutput("af2"),
+              infoBoxOutput("af2"), 
               infoBoxOutput("om2"),
               infoBoxOutput("af3"),
               infoBoxOutput("om3"),
@@ -163,7 +167,14 @@ body <- dashboardBody(
                     trigger = "Summary",
                     size = "large",
                     withSpinner(
-                      dataTableOutput("oppsumm")))),
+                      dataTableOutput("oppsumm"))),
+            bsModal(id = "top_list",
+                    title = "Highscore",
+                    trigger = "highscore",
+                    size = "large",
+                    withSpinner(
+                      dataTableOutput("leaderboard_out"))),
+            ),
 
 
 ## Design Tidsserier tab ---------------------------------------------------
@@ -174,7 +185,8 @@ body <- dashboardBody(
               plotOutput("sim_plot"),
               plotOutput("temp"),
               tableOutput("summarise"),
-              tableOutput("oppsummDF")))
+              tableOutput("oppsummDF")
+              ))
             )
             
     )
@@ -533,7 +545,6 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                  session = session, 
                  inputId = "CageSel",
                  selected = 0
-                 
                )
                
                reset("Cleaner2")
@@ -543,6 +554,22 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                
                shinyjs::toggle(id = "Summary",
                                condition = rec_env$t > 546)
+               shinyjs::toggle(id = "highscore",
+                               condition = rec_env$t > 546)
+               if(rec_env$t > 546){
+                 disable("Go")
+                 disable("secCount")
+               }
+               if(rec_env$t > 546){
+                 stand <- data.frame(Navn = input$Navn, Poeng = rec_env$oppsDF$poeng, Dato = as.character(Sys.Date ()))
+                 leaderboard <- read.csv('leaderboard.csv', sep = ',') %>% 
+                   bind_rows(stand) %>% 
+                   arrange(desc(Poeng))
+                 write.csv(leaderboard, file = 'leaderboard.csv', row.names = F)
+                 leaderboard <- as.data.frame(leaderboard)
+               }
+               
+               
                
                ## Beregner dødelighet
                rec_env$mort <- TreatMort(SV = rec_env$SV)
@@ -565,9 +592,8 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
 
 ### Updating points ---------------------------------------------------------
                rec_env$oppsDF$poeng <- #standard_points(x = 
-                 sum(rec_env$summarised_data$points_week_cage, na.rm = T) -#, PO = input$PO, penalty_type = "no_treatment")
-               400 - 
-                 threshold_penalty(rec_env$summarised_data, PO = input$PO)
+                 round(sum(rec_env$summarised_data$points_week_cage, na.rm = T) - 400 - 
+                 threshold_penalty(rec_env$summarised_data, PO = input$PO), 0)
                ## Gammel poengberegning
                #rec_env$oppsDF$poeng <- 100 - (rec_env$mort*100) - sum(rec_env$SV$use.therm) - sum(rec_env$SV$use.EMcht) - sum(rec_env$SV$use.HPcht)
 
@@ -703,9 +729,12 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                
                ## Summary model
                output$oppsumm <- renderDataTable(
-                 t(rec_env$oppsDF)
-              
+                 t(rec_env$oppsDF) 
                )
+               output$leaderboard_out <- renderDataTable(
+                 leaderboard
+               )
+               
               
              }  ## End while loop
              
