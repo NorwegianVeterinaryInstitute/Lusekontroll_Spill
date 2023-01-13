@@ -82,7 +82,8 @@ yat    <- log10(labels+logoffset)
 
 ## summarise_data function
 summarise_data <- function(SV_local = SV,
-                           model.settings = default.model.settings) {
+                           model.settings = default.model.settings,
+                           PO = input$PO) {
   
   SV <- SV_local
   Ncages <- model.settings$Ncages
@@ -130,47 +131,45 @@ summarise_data <- function(SV_local = SV,
       filter(((day)%%7 == 0) | (day == 1)) %>%                       # 28.02.22 fjernet -1 fra day
       mutate(week_simulated = !is.na(Y.CH)) %>% 
       mutate(running_week = cumsum(week_simulated)) %>% 
-      mutate(penalty_feed   = EMcht*25) %>%                           # Trekk for behandling
+      mutate(penalty_feed   = EMcht*50) %>%                           # Trekk for behandling
       mutate(penalty_medici = HPcht*50) %>%                           # Trekk for behandling
       mutate(penalty_therm  = therm*50) %>%                           # Trekk for behandling
-      #mutate(penalty_lice   = (Y.AF > -0.29) * 20) %>%                # Trekk for lus
       mutate(penalty_tot    = penalty_feed + penalty_medici + penalty_therm) %>% 
+      mutate(penalty_tot = penalty_tot/penaltySTD[POx == PO, 2]) %>% 
       mutate(week_pay_cage  = 100) %>% 
-      mutate(points_week_cage = week_pay_cage * week_simulated - penalty_tot) 
+      mutate(points_week_cage = week_pay_cage * week_simulated - penalty_tot)
   }
   ) %>% 
     do.call(rbind, .) %>% 
     mutate(treatment = ((use.HPcht + use.DMcht + use.AZcht + use.EMcht + use.DBcht + use.therm + use.freshw + use.mech + use.fx != 0) * day)) %>%
-    # mutate(treatment = (use.HPcht + use.DMcht + use.AZcht + use.DBcht + use.therm + use.freshw + use.mech + use.fx != 0)) %>%
     dplyr::select(!starts_with("use")) %>% 
     mutate(treatment = na_if(treatment, 0))
 }
 
+## dataframe to standardize points between POs
+POx = paste0("PO", 1:13)
+no_treatment <- c(9.1, 23.3, 31.9, 25.2, 16.7, 24.8, 22.7, 13.1, 7.9, 10.0, 2.5, 4.5, 0.0) 
+weeks_above  <- c(1.6, 4.5, 7.1, 4.6, 2.9, 5.5, 4.8, 2.1, 1.1, 1.6, 0.2, 0.6, 0.0)
+penaltySTD <- data.frame(POx, no_treatment, weeks_above) %>% 
+  mutate(weeks_above = (weeks_above/max(weeks_above))) %>% 
+  mutate(no_treatment = (no_treatment/max(no_treatment))) 
+
 ## function that calculates penalty for average lice counts above threshold
-threshold_penalty <- function(summarised_data_) {
-  DF <- summarised_data_ %>% 
+threshold_penalty <- function(summarised_data_, PO) {
+    summarised_data_ %>% 
     mutate(Y.AFF = 10^(Y.AF) - logoffset) %>% 
     filter(week_simulated) %>% 
-    dplyr::select(Y.AFF, cage, running_week, llimit) %>% 
-    group_by(running_week) %>% 
-    summarise(
-      running_week = running_week,
-      Y.AFF = mean(Y.AFF),
-      llimit = llimit
-    ) %>% 
-    ungroup %>% 
+    filter(running_week == max(running_week)) %>% 
+    mutate(Y.AFF = mean(Y.AFF)) %>% 
+    filter(cage == 1) %>% 
     mutate(above_threshold = (Y.AFF > llimit)) %>% 
-    mutate(penalty = (above_threshold * 350) + above_threshold *(Y.AFF-0.5) * 50) %>% 
+    mutate(penalty = (above_threshold * 150) + (above_threshold *(Y.AFF-llimit) * 50)) %>% 
+    mutate(penalty = penalty/penaltySTD[POx == PO, 3]) %>% 
     dplyr::select(penalty) %>% 
     sum %>% 
     return
 }
 
-## Dataramme med hunnlustall
-# hl_df <- data.frame(merd1 = NA,
-#                     merd2 = NA,
-#                     merd3 = NA,
-#                     merd4 = NA)
 
 lice_df <- data.frame(af1 = NA,
                       af2 = NA,
