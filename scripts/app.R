@@ -561,12 +561,12 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                  disable("secCount")
                }
                if(rec_env$t > 546){
-                 stand <- data.frame(Navn = input$Navn, Poeng = rec_env$oppsDF$poeng, Dato = as.character(Sys.Date ()))
+                 stand <- data.frame(Navn = input$Navn, Poeng = rec_env$oppsDF$poeng, Dato = as.character(Sys.Date ()), PO = input$PO)
                  leaderboard <- read.csv('leaderboard.csv', sep = ',') %>% 
                    bind_rows(stand) %>% 
                    arrange(desc(Poeng))
                  write.csv(leaderboard, file = 'leaderboard.csv', row.names = F)
-                 leaderboard <- as.data.frame(leaderboard)
+                 leaderboard <- as.data.frame(leaderboard) %>% filter(PO == input$PO)
                }
                
                
