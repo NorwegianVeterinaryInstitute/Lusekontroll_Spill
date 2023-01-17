@@ -36,7 +36,7 @@ paramSamples <- readRDS("input/paramSamples2020v1.RDS")
 
 ## Convert mortality of R and CO to logit scale
 logit <- function(p) log(p/(1-p))
-paramSamples["lambda0.RCOnat",] <- logit(paramSamples["lambda0.RCOnat",])
+#paramSamples["lambda0.RCOnat",] <- logit(paramSamples["lambda0.RCOnat",])
 
 ## Read environmental data into R
 # (these data are real examples, generated in the script FindTempAndExternalLicePressure.R)
@@ -56,7 +56,7 @@ load("input/ProdList.Rdata")
 # National Veterinary Institute Fish Health Report 2018. Report 6b/2019. 
 
 ## Read model functions
-source("ModelFunctions_v2.R")
+source("ModelFunctions_v4.R")
 
 ## Set model settings
 Region = c("PO 1-4", "PO 5-7", "PO 8-13")[1]
