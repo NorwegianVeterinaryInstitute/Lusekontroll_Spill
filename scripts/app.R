@@ -215,12 +215,12 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
 
            # Update sidebarmenu after clicking "Godkjenn valgene og vis kart")
            output$nyfane1 <- renderMenu({
-             if( input$Next == TRUE )
+             if( input$switchSpill == TRUE )
                menuItem("Lusespill", tabName = "spill", icon = icon("gamepad"))
            })
            
            output$nyfane2 <- renderMenu({
-             if( input$Next == TRUE )
+             if( input$switchSpill == TRUE )
                menuItem("Tidsserier", tabName = "grafer", icon = icon("chart-area"))
            })
 
@@ -342,9 +342,19 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
            
            observeEvent(input$switchSpill, {
              updateTabsetPanel(session, "tabs",selected = "spill")
+             
+               disable("PO")
+               disable("StartTime")
+               disable("Cleaner")
+               disable("Navn")
+               disable("Skirt")
+               disable("FromSkirt")
+               disable("Next")
+               disable("swithSpill")
            })
            if(t < 2) disable(selector = "#TreatmentType button:eq(0)") 
       
+           
 
 
 # Insert valueboxes with initial values -----------------------------------
@@ -566,6 +576,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                  disable("Go")
                  disable("secCount")
                }
+               
                if(rec_env$t > 546){
                  stand <- data.frame(Navn = input$Navn, Poeng = rec_env$oppsDF$poeng, Dato = as.character(Sys.Date ()), PO = input$PO)
                  leaderboard <- read.csv('leaderboard.csv', sep = ',') %>% 
@@ -891,21 +902,34 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
              updateTabsetPanel(session, "tabs",selected = "spill")
            })
            
-      
-           cust_labeller <- function(x) paste0("MERD ", x)
-   
            output$sim_plot <- renderPlot({
              ggplot(rec_env$summarised_data, aes(day, Y.OM)) +
                theme_classic() +
                scale_y_continuous(name="Lus pr laks", breaks = yat, labels = labels, limits=c(min(yat), log10(ymax.plot+logoffset))) +
-               geom_line(aes(day, log10(llimit)), colour = "green", size = 0.75, linetype = 2) +
-               geom_point(shape = 1, colour = "blue") +
-               geom_point(aes(day, Y.AF), shape = 1, colour = "red") +
-               geom_vline(aes(xintercept = rec_env$summarised_data$treatment + 1), colour = "rosybrown") +
-               facet_wrap(~cage,  ncol=2, labeller = as_labeller(cust_labeller)) +
-               theme(text = element_text(size=20))               
-             
+               geom_line(aes(day, log10(llimit), colour = "lusegrense", linetype = "lusegrense"), size = 1.25) +
+               geom_point(aes(colour = "bevegelige", shape = "bevegelige"), size = 2.5) +
+               geom_point(aes(day, Y.AF, colour = "hunnlus", shape = "hunnlus"), size = 2.5) +
+               geom_vline(aes(xintercept = rec_env$summarised_data$treatment + 1, 
+                              colour = "behandling",
+                              linetype = "behandling"),
+                          show.legend = F) +
+               scale_color_manual(name = "Tegnforklaring",
+                                  breaks = c("lusegrense", "bevegelige", "hunnlus", "behandling"),
+                                  values = c("lusegrense" = "green",
+                                             "bevegelige" = "blue",
+                                             "hunnlus" = "red",
+                                             "behandling" = "rosybrown"),
+                                  guide = guide_legend(override.aes = list(
+                                    linetype = c(2, 0, 0, 1),
+                                    shape = c(NA, 19, 17, NA)))
+                                  ) +
+               guides(shape = "none", linetype = "none") +
+               facet_wrap(~cage,  ncol=2) +
+               theme(text = element_text(size=20),
+                     legend.position = "bottom")
            })
+           
+           
            
            output$temp <- renderPlot({
              ggplot(rec_env$summarised_data, aes(day, seatemp)) +
