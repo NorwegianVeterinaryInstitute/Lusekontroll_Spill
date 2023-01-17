@@ -14,7 +14,7 @@ library(shinycssloaders)
 library(DT)
 
 ## Load data
-Coef <- readRDS("Coef20211209.Rds")
+Coef <- readRDS("Coef20230103.Rds")
 load("EnvListShort.RData")
 
 trt.sample <- trt.sample.rangen
@@ -33,7 +33,7 @@ default.model.settings <- list(
   
   # Number and weight of salmon:
   w0 = 0.2, # Initial weight (kg) of salmon,
-  nstock = 1, # Total number of salmon (millions) stocked in farm (equally divided between cages),
+  nstock = 0.8, # Total number of salmon (millions) stocked in farm (equally divided between cages),
   dstock = 0, # Cage-to-cage delay (days) in sequential stocking of salmon,
   mnat = 0.005/30, # Baseline daily mortality of salmon,
   tslaught = 600, # Time (days) that slaughter starts,
@@ -100,6 +100,13 @@ summarise_data <- function(SV_local = SV,
     c(treatment[(treat.delay+1):nrow(treatment), cage_no], rep(0, treat.delay))
   }
   
+  shift_cleaner <- function(cleaner,
+                            shift, 
+                              cage_no) 
+  { # To fit the cleaner to the filtered days  
+    c(cleaner[(shift):nrow(cleaner), cage_no], rep(0, (shift-1)))
+  }
+  
   map(1:Ncages, function(x) {
     data.frame(Y.CH  = log_transform(lus = SV$Y.CH, cage_no = x)) %>% 
       mutate(Y.OM  = log_transform(lus = SV$Y.OM, cage_no = x)) %>% 
@@ -110,7 +117,7 @@ summarise_data <- function(SV_local = SV,
       mutate(Y2.AF = log_transform(lus = SV$Y2.AF, cage_no = x)) %>% 
       # mutate(N.CH  = SV$N.CH[,,x] + logoffset) %>%  # dele på N.Sal?
       # mutate(N.OM  = SV$N.OM[,,x] + logoffset) %>% 
-      # mutate(N.AF  = SV$N.AF[,,x] + logoffset) #%>% 
+      # mutate(N.AF  = SV$N.AF[,,x] + logoffset) %>% 
       mutate(cage  = as.character(x)) %>% 
       mutate(day = (1:Ndays)) %>% 
       mutate(seatemp = SV$ST) %>% 
@@ -127,14 +134,17 @@ summarise_data <- function(SV_local = SV,
       mutate(use.fx     = shift_treatment(SV$use.fx, x)) %>% 
       mutate(EMcht  = shift_treatment(SV$use.EMcht, x)) %>%          # lagt inn 4. nov - for mulighet for disabling
       mutate(therm  = shift_treatment(SV$use.therm, x)) %>%          # Lagt til 8. des - for poeng
-      mutate(HPcht  = shift_treatment(SV$use.HPcht, x)) %>%          # Lagt til 8. des - for poeng 
+      mutate(HPcht  = shift_treatment(SV$use.HPcht, x)) %>%  
+      mutate(rensefisk = shift_cleaner(cleaner = SV$S.wrasse, shift = 2, cage_no = x)) %>% 
       filter(((day)%%7 == 0) | (day == 1)) %>%                       # 28.02.22 fjernet -1 fra day
       mutate(week_simulated = !is.na(Y.CH)) %>% 
       mutate(running_week = cumsum(week_simulated)) %>% 
+      ## Skalere etter kostnad ved behandling
+      mutate(penalty_clean  = rensefisk*10000) %>% 
       mutate(penalty_feed   = EMcht*50) %>%                           # Trekk for behandling
       mutate(penalty_medici = HPcht*50) %>%                           # Trekk for behandling
       mutate(penalty_therm  = therm*50) %>%                           # Trekk for behandling
-      mutate(penalty_tot    = penalty_feed + penalty_medici + penalty_therm) %>% 
+      mutate(penalty_tot    = penalty_feed + penalty_medici + penalty_therm + penalty_clean) %>% 
       mutate(penalty_tot = penalty_tot/penaltySTD[POx == PO, 2]) %>% 
       mutate(week_pay_cage  = 100) %>% 
       mutate(points_week_cage = week_pay_cage * week_simulated - penalty_tot)
@@ -155,7 +165,7 @@ penaltySTD <- data.frame(POx, no_treatment, weeks_above) %>%
   mutate(no_treatment = (no_treatment/max(no_treatment))) 
 
 ## function that calculates penalty for average lice counts above threshold
-threshold_penalty <- function(summarised_data_, PO) {
+threshold_penalty <- function(summarised_data_, PO, mort, SV) {
     summarised_data_ %>% 
     mutate(Y.AFF = 10^(Y.AF) - logoffset) %>% 
     filter(week_simulated) %>% 
@@ -163,7 +173,10 @@ threshold_penalty <- function(summarised_data_, PO) {
     mutate(Y.AFF = mean(Y.AFF)) %>% 
     filter(cage == 1) %>% 
     mutate(above_threshold = (Y.AFF > llimit)) %>% 
+    mutate(penalty_mort = mort*sum(apply(SV$N.SAL,2,max))*0.1) %>% 
+    ## Legge inn foreslåtte dagmulkter her?
     mutate(penalty = (above_threshold * 150) + (above_threshold *(Y.AFF-llimit) * 50)) %>% 
+    mutate(penalty = penalty + penalty_mort) %>%   
     mutate(penalty = penalty/penaltySTD[POx == PO, 3]) %>% 
     dplyr::select(penalty) %>% 
     sum %>% 

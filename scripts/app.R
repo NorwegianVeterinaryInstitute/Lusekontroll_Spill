@@ -42,7 +42,7 @@ body <- dashboardBody(
             h1("Lusestrategispill"),
             p("Lusespillet simulerer lakselussituasjonen i et oppdrettsanlegg gjennom en produksjonssyklus på 18 måneder."),
             br(),
-            p("Du velger område og måned for produksjonsstart, så velges en tilfeldig lokalitet med tilhørende ytre miljøforhold. De ytre miljøforholdene som påvirker luseutviklingen er temperatur og smittepress. Antall laks er i anlegget er 1 million, som fordeles ut over fire merder."),
+            p("Du velger område og måned for produksjonsstart, så velges en tilfeldig lokalitet med tilhørende ytre miljøforhold. De ytre miljøforholdene som påvirker luseutviklingen er temperatur og smittepress. Antall laks i anlegget er 800 tusen, som fordeles ut over fire merder."),
             br(),
             p("Før du starter produksjonen, velger du om du vil bruke luseskjørt eller sette ut rensefisk. Luseskjørt stopper halvparten av luselarvene som kommer fra andre anlegg de første seks månedene. Antallet rensefisk som settes ut er 5 % av antallet laks, men antallet minker utover i produksjonssyklusen – og spesielt raskt hvis du bruker termisk eller mekanisk lusebehandling."),
             br(),
@@ -200,7 +200,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
 # Sourcing Modelfunctions and init ----------------------------------------
 
            ## Load functions
-           source("ModelFunctions_v3b.R", local = TRUE)
+           source("ModelFunctions_v4.R", local = TRUE)
            
            ## Model initialisation
            # default model settings
@@ -599,7 +599,12 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
 ### Updating points ---------------------------------------------------------
                rec_env$oppsDF$poeng <- #standard_points(x = 
                  round(sum(rec_env$summarised_data$points_week_cage, na.rm = T) - 400 - 
-                 threshold_penalty(rec_env$summarised_data, PO = input$PO), 0)
+                 threshold_penalty(rec_env$summarised_data, 
+                                   PO = input$PO,
+                                   mort = rec_env$mort,
+                                   SV = rec_env$SV
+                                   ), 
+                 0)
                ## Gammel poengberegning
                #rec_env$oppsDF$poeng <- 100 - (rec_env$mort*100) - sum(rec_env$SV$use.therm) - sum(rec_env$SV$use.EMcht) - sum(rec_env$SV$use.HPcht)
 
