@@ -321,16 +321,17 @@ TreatMort <- function(SV){
 }
 
 ## Oppsummeringstabell
-vars <- c("Poeng",
-          "Laksed?delighet",
-          "Ant ikke-med behandlinger",
-          "Ant forbehandlinger",
-          "Ant med behandlinger",
-          "Produksjonsomr?de",
-          "Oppstartsm?ned",
-          "Luseskj?rt",
-          "Luseskj?rt start",
-          "Andel leppefisk")
+opps_navn <- c("Poeng",
+               "Laksedødelighet",
+               "Ant ikke-med behandlinger",
+               "Ant forbehandlinger",
+               "Ant med behandlinger",
+               "Produksjonsområde",
+               "Oppstartsmåned",
+               "Luseskjørt [0 (nei), 1 (ja)]",
+               "Luseskjørt start",
+               "Rensefisk [0 (nei), 1 (ja)]",
+               "Andel rensefisk")
 
 oppsDF <- data.frame(poeng = NA,
                      mort = NA,
@@ -343,6 +344,8 @@ oppsDF <- data.frame(poeng = NA,
                      skirt_start = NA,
                      leppe = NA,
                      andel_leppe = 0)
+
+
 
 
 # ## Run summarise_data()
