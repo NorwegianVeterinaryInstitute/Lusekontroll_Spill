@@ -79,6 +79,7 @@ body <- dashboardBody(
 
     tabItem("valg",
             box(width = 5, height = 600,
+                textInput("Navn", "Navn på deg som spiller", value = "Anonym"),
                 selectInput("PO", "Velg produksjonsområde",
                             choices = c("Produksjonsområde 2" = "PO2",
                                         "Produksjonsområde 3" = "PO3",
@@ -102,7 +103,6 @@ body <- dashboardBody(
                 radioButtons("Cleaner", "Vil du ha rensefisk fra start?",
                              c("Nei" = 0,
                                "Ja" = 1)),
-                textInput("Navn", "Navn på deg som spiller", value = "Anonym"),
                 radioButtons("Skirt", "Vil du bruke luseskjørt i anlegget?",
                              c("Nei" = 0,
                                "Ja" = 1)),
@@ -175,7 +175,8 @@ body <- dashboardBody(
                     trigger = "Summary",
                     size = "large",
                     withSpinner(
-                      dataTableOutput("oppsumm"))),
+                      # dataTableOutput("oppsumm")
+                      DT::DTOutput("oppsumm"))),
             bsModal(id = "top_list",
                     title = "Highscore",
                     trigger = "highscore",
@@ -192,8 +193,8 @@ body <- dashboardBody(
               actionButton("switchSpill2", "Tilbake til spillet"),
               plotOutput("sim_plot"),
               plotOutput("temp"),
-              tableOutput("summarise"),
-              tableOutput("oppsummDF")
+              tableOutput("summarise")      # kan kommenteres ut/fjernes senere
+              # DT::DTOutput("oppsummDF")   # er som bsModal rett over
               ))
             )
             
@@ -585,14 +586,14 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                  disable("secCount")
                }
                
-               if(rec_env$t > 546){
-                 stand <- data.frame(Navn = input$Navn, Poeng = rec_env$oppsDF$poeng, Dato = as.character(Sys.Date ()), PO = input$PO)
-                 leaderboard <- read.csv('leaderboard.csv', sep = ',') %>% 
-                   bind_rows(stand) %>% 
-                   arrange(desc(Poeng))
-                 write.csv(leaderboard, file = 'leaderboard.csv', row.names = F)
-                 leaderboard <- as.data.frame(leaderboard) %>% filter(PO == input$PO)
-               }
+               # if(rec_env$t > 546){
+               #   stand <- data.frame(Navn = input$Navn, Poeng = rec_env$oppsDF$poeng, Dato = as.character(Sys.Date ()), PO = input$PO)
+               #   leaderboard <- read.csv('leaderboard.csv', sep = ',') %>% 
+               #     bind_rows(stand) %>% 
+               #     arrange(desc(Poeng))
+               #   write.csv(leaderboard, file = 'leaderboard.csv', row.names = F)
+               #   leaderboard <- as.data.frame(leaderboard) %>% filter(PO == input$PO)
+               # }
                
                
                
@@ -607,6 +608,7 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                rec_env$oppsDF$ikke_med_beh <- sum(rec_env$SV$use.therm)
                rec_env$oppsDF$for_beh <- sum(rec_env$SV$use.EMcht)
                rec_env$oppsDF$med_beh <- sum(rec_env$SV$use.HPcht)
+               # rec_emv$oppsDF$andel_leppe
                
 
                
@@ -624,6 +626,16 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                                    SV = rec_env$SV
                                    ), 
                  0)
+               
+               if(rec_env$t > 546){
+                 stand <- data.frame(Navn = input$Navn, Poeng = rec_env$oppsDF$poeng, Dato = as.character(Sys.Date ()), PO = input$PO)
+                 leaderboard <- read.csv('leaderboard.csv', sep = ',') %>% 
+                   bind_rows(stand) %>% 
+                   arrange(desc(Poeng))
+                 write.csv(leaderboard, file = 'leaderboard.csv', row.names = F)
+                 leaderboard <- as.data.frame(leaderboard) %>% filter(PO == input$PO)
+               }
+               
                ## Gammel poengberegning
                #rec_env$oppsDF$poeng <- 100 - (rec_env$mort*100) - sum(rec_env$SV$use.therm) - sum(rec_env$SV$use.EMcht) - sum(rec_env$SV$use.HPcht)
 
@@ -758,9 +770,22 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                }
                
                ## Summary model
-               output$oppsumm <- renderDataTable(
-                 t(rec_env$oppsDF) 
-               )
+               output$oppsumm <- DT::renderDT({
+                 opps <- t(rec_env$oppsDF)
+                 rownames(opps) <- opps_navn
+                 colnames(opps) <- "Verdi"
+                 DT::datatable(
+                   opps,
+                   options = list(iDisplayLength = 25),
+                   escape = FALSE
+                 )
+               })
+               
+               # output$oppsumm <- renderDataTable(
+               #   t(rec_env$oppsDF) 
+               # )
+               
+               ## Leaderboard
                output$leaderboard_out <- renderDataTable(
                  leaderboard
                )
@@ -947,7 +972,27 @@ shinyApp(ui = dashboardPage(header, sidebar, body),
                           mapping = aes(day, seatemp))
            })
            
-           output$oppsummDF <- renderTable({rec_env$oppsDF})
+           #output$oppsummDF <- renderTable({rec_env$oppsDF})
+           
+           # output$oppsummDF <- DT::renderDT({
+           #   opps <- rec_env$oppsDF()
+           #   rownames(opps) <- c("Poeng",
+           #                       "Laksedødelighet",
+           #                       "Ant ikke-med behandlinger",
+           #                       "Ant forbehandlinger",
+           #                       "Ant med behandlinger",
+           #                       "Produksjonsområde",
+           #                       "Oppstartsmåned",
+           #                       "Luseskjørt",
+           #                       "Luseskjørt start",
+           #                       "Rensefisk",
+           #                       "Andel rensefisk")
+           #   DT::datatable(
+           #     opps,
+           #     escape = FALSE
+           #   )
+           #   })
+           
            output$summarise <- renderTable({rec_env$summarised_data})
            
            
